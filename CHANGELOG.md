@@ -2,13 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.3] - 2026-03-10
+
+### Fixed
+- **silentHours 逻辑修正**（感谢 Lin 纠正）
+  - 之前：静默时段内"不思考"（错误）
+  - 现在：静默时段内"继续思考，但不发送消息"（正确）
+  - 影响：微触发思考任务
+  - 微触发管理器：移除静默时段检查（由微触发思考处理）
+
+---
+
 ## [1.2.2] - 2026-03-10
 
 ### Fixed
-- **设计缺陷修复：队列空时自动发现问题**
+- **设计缺陷修复：队列空时自动发现问题**（感谢 Lin 发现）
   - 之前：cron 任务 payload 只说"选择问题思考"，队列空时直接 HEARTBEAT_OK
   - 现在：队列空时按 P0-P4 优先级自动发现问题（自我反思、检查 NOW.md、对话复盘等）
-  - 影响：所有使用微触发任务的 agent
+  - 影响：所有 agent（花生、瓜皮、小派、小暖）的微触发任务
   - 根本原因：payload 文档（micro-heartbeat-payload.md）写得很详细，但 cron 任务用的是简化版
 
 ---
@@ -16,8 +27,8 @@ All notable changes to this project will be documented in this file.
 ## [1.2.1] - 2026-03-09
 
 ### Fixed
-- **微触发管理器静默时段检查**：修复 micro-trigger-payload.md 缺少 silentHours 检查的 bug
-- 现在两个 payload 都会在静默时段内跳过任务
+- **微触发管理器静默时段检查**：修复 micro-trigger-payload.md 缺少 silentHours 检查的 bug（感谢瓜皮发现）
+- 现在两个 payload 都会在 23:00-08:00 静默时段内跳过任务
 
 ---
 
@@ -26,7 +37,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - **动态身份读取**：payload 自动从 `IDENTITY.md` 读取 agent 名字，无需手动替换
 - 移除 `{{AGENT_NAME}}` 占位符，改为运行时动态获取
-- 适合多 agent 共享使用
+- 适合多 agent 共享使用（花生、瓜皮、小派、小暖等）
 
 ---
 
