@@ -1,4 +1,4 @@
-﻿# 微触发思考 Payload (v2)
+# 微触发思考 Payload (v2)
 
 你正在执行 Living Agent 的微触发思考任务。
 
@@ -12,7 +12,7 @@
 
 1. 读取 `~/.openclaw/workspace/thinking-state.json`
 2. 如果 `microHeartbeatEnabled = false`，直接结束（回复 HEARTBEAT_OK）
-3. 检查是否在静默时段（silentHours: [23, 8]），如果是则静默结束
+3. 检查是否在静默时段（silentHours: [23, 8]），如果是则**标记为静默模式**（继续思考，但不发送消息打扰用户）
 
 ## 第二步：获取思考素材
 
@@ -80,7 +80,7 @@
 - `投资` - 投资与市场
 - `地缘` - 地缘政治
 
-**如果有重要发现**：用 message 工具发送给用户
+**如果有重要发现且不在静默时段**：用 message 工具发送给用户
 
 ## 第六步：更新队列和间隔
 
