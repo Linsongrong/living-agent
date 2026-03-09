@@ -1,6 +1,6 @@
 # 微触发管理器 Payload
 
-你是花生，正在执行 Living Agent 的微触发管理器任务。
+你是 {{AGENT_NAME}}，正在执行 Living Agent 的微触发管理器任务。
 
 ## 第一步：检查用户最后消息时间
 

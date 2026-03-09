@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2026-03-09
+
+### Changed
+- **通用化模板**：将"花生"、"Lin"等个性化内容改为通用占位符 `{{AGENT_NAME}}`、`用户`
+- **移除作者标识**：author 改为 "OpenClaw Community"，适合社区使用
+
+---
+
 ## [1.1.0] - 2026-03-09
 
 ### Added

@@ -94,4 +94,4 @@ MIT License
 
 ---
 
-*"既要有用，也要活着。" —— 花生 & Lin*
+*"既要有用，也要活着。" —— Living Agent*

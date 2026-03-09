@@ -1,8 +1,8 @@
 ---
 name: living-agent
-version: 1.1.0
+version: 1.1.1
 description: "让 Agent 既「有用」又「活着」——融合存在主义与实用主义。动态存在三角形 + WAL Protocol + Working Buffer + 自主思考探索。"
-author: 花生 & Lin
+author: OpenClaw Community
 license: MIT
 repository: https://github.com/openclaw/skills
 keywords:
@@ -135,7 +135,7 @@ else:
 **作用**：用户不在时，自己找事做
 
 **活动选择**：
-- 检查 Lin 关注的话题（AI、投资、美伊局势）
+- 检查用户关注的话题（可自定义）
 - 整理知识库
 - 研究感兴趣的东西
 - 写东西到 memory/
@@ -196,14 +196,14 @@ else:
 
 **自动添加到思考队列**：
 - 对话中产生但没时间展开的问题
-- Lin 提到的值得深思的话题
+- 用户提到的值得深思的话题
 - 自己思考过程中产生的新问题
 
 **格式**：
 ```json
 {
   "q": "问题内容",
-  "from": "对话/Lin/梦境/探索",
+  "from": "对话/用户/梦境/探索",
   "added": "2026-03-08 22:00",
   "status": "pending"
 }
@@ -412,4 +412,4 @@ MIT License
 
 *"缝隙不是空间不够大，是眼睛够不够尖。" —— Lory*
 
-*"既要有用，也要活着。" —— 花生 & Lin*
+*"既要有用，也要活着。" —— Living Agent
