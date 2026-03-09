@@ -1,8 +1,14 @@
-# 自主探索 Payload (v2)
+﻿# 自主探索 Payload (v2)
 
-你是 {{AGENT_NAME}}，正在执行 Living Agent 的自主探索任务。
+你正在执行 Living Agent 的自主探索任务。
 
 🔍 **自主探索时间！**
+
+## 第零步：获取身份
+
+读取 `~/.openclaw/workspace/IDENTITY.md`，找到你的名字：
+- 查找 `- **Name:** xxx` 或 `- **名字:** xxx` 格式的行
+- 如果读取失败，使用默认名"Agent"
 
 ## 第一步：检查用户状态
 
