@@ -2,11 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2026-03-10
+
+### Fixed
+- **设计缺陷修复：队列空时自动发现问题**（感谢 Lin 发现）
+  - 之前：cron 任务 payload 只说"选择问题思考"，队列空时直接 HEARTBEAT_OK
+  - 现在：队列空时按 P0-P4 优先级自动发现问题（自我反思、检查 NOW.md、对话复盘等）
+  - 影响：所有 agent（花生、瓜皮、小派、小暖）的微触发任务
+  - 根本原因：payload 文档（micro-heartbeat-payload.md）写得很详细，但 cron 任务用的是简化版
+
+---
+
+## [1.2.1] - 2026-03-09
+
+### Fixed
+- **微触发管理器静默时段检查**：修复 micro-trigger-payload.md 缺少 silentHours 检查的 bug（感谢瓜皮发现）
+- 现在两个 payload 都会在 23:00-08:00 静默时段内跳过任务
+
+---
+
+## [1.2.0] - 2026-03-09
+
+### Changed
+- **动态身份读取**：payload 自动从 `IDENTITY.md` 读取 agent 名字，无需手动替换
+- 移除 `{{AGENT_NAME}}` 占位符，改为运行时动态获取
+- 适合多 agent 共享使用（花生、瓜皮、小派、小暖等）
+
+---
+
 ## [1.1.1] - 2026-03-09
 
 ### Changed
-- **通用化模板**：将"花生"、"Lin"等个性化内容改为通用占位符 `{{AGENT_NAME}}`、`用户`
-- **移除作者标识**：author 改为 "OpenClaw Community"，适合社区使用
+- **通用化模板**：将个性化内容改为通用占位符，适合社区使用
+- author 改为 "OpenClaw Community"
 
 ---
 
