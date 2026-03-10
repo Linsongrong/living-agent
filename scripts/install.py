@@ -53,49 +53,48 @@ def create_cron_job(name, every_ms, payload_file, disabled=False, agent_id="main
     with open(payload_path, 'r', encoding='utf-8') as f:
         payload = f.read()
     
-    # 构建 cron add 命令
-    cmd = [
-        "openclaw", "cron", "add",
-        "--name", name,
-        "--every", f"{every_ms // 60000}m",
-        "--session", "isolated",
-        "--agent", agent_id,
-        "--session-key", f"agent:{agent_id}:main",
-        "--message", payload,
-        "--json"  # 添加 JSON 输出
-    ]
+    # 写入临时文件（避免 PowerShell 转义问题）
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', suffix='.txt', delete=False) as tmp:
+        tmp.write(payload)
+        tmp_path = tmp.name
     
-    if disabled:
-        cmd.append("--disabled")
-    
-    # 执行命令
-    print(f"  创建 {name}...")
-    
-    # 使用 PowerShell 执行（Windows）
-    if sys.platform == "win32":
-        # 转义特殊字符
-        escaped_payload = payload.replace('"', '`"').replace('$', '`$')
-        ps_cmd = f'openclaw cron add --name "{name}" --every {every_ms // 60000}m --session isolated --agent {agent_id} --session-key "agent:{agent_id}:main" --message "{escaped_payload}" --json'
-        if disabled:
-            ps_cmd += " --disabled"
+    try:
+        # 构建 cron add 命令（使用 Get-Content 读取临时文件）
+        if sys.platform == "win32":
+            ps_cmd = f'$payload = Get-Content "{tmp_path}" -Raw -Encoding UTF8; openclaw cron add --name "{name}" --every {every_ms // 60000}m --session isolated --agent {agent_id} --session-key "agent:{agent_id}:main" --message $payload --json'
+            if disabled:
+                ps_cmd += " --disabled"
+            
+            success, stdout, stderr = run_command(ps_cmd)
+        else:
+            # Unix/Linux
+            cmd = f'openclaw cron add --name "{name}" --every {every_ms // 60000}m --session isolated --agent {agent_id} --session-key "agent:{agent_id}:main" --message "$(cat {tmp_path})" --json'
+            if disabled:
+                cmd += " --disabled"
+            success, stdout, stderr = run_command(cmd)
         
-        success, stdout, stderr = run_command(ps_cmd)
-    else:
-        success, stdout, stderr = run_command(" ".join([f'"{c}"' if " " in c else c for c in cmd]))
-    
-    if success and stdout:
-        # 从输出中提取 cron ID
-        try:
-            result = json.loads(stdout)
-            cron_id = result.get('id')
-            print(f"  ✅ {name} (ID: {cron_id})")
-            return cron_id
-        except Exception as e:
-            print(f"  ✅ {name} (无法解析 ID: {e})")
-            return "unknown"
-    else:
-        print(f"  ❌ 创建失败: {stderr}")
-        return None
+        # 删除临时文件
+        Path(tmp_path).unlink()
+        
+        if success and stdout:
+            # 从输出中提取 cron ID
+            try:
+                result = json.loads(stdout)
+                cron_id = result.get('id')
+                print(f"  ✅ {name} (ID: {cron_id})")
+                return cron_id
+            except Exception as e:
+                print(f"  ✅ {name} (无法解析 ID: {e})")
+                print(f"     输出: {stdout[:200]}")
+                return "unknown"
+        else:
+            print(f"  ❌ 创建失败: {stderr}")
+            return None
+    finally:
+        # 确保临时文件被删除
+        if Path(tmp_path).exists():
+            Path(tmp_path).unlink()
 
 
 def main():
