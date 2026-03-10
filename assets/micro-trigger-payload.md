@@ -8,14 +8,18 @@
 2. 检查当前时间是否在静默时段内（如 [23, 8] 表示 23:00-08:00）
 3. 如果在静默时段内，直接结束（回复 HEARTBEAT_OK），不做任何操作
 
-## 第二步：检查用户最后消息时间（重要修复！）
+## 第二步：检查用户最后消息时间
 
-**关键**：必须从 sessions_history 获取最新时间，不能依赖 thinking-state.json！
+**重要**：`sessions_history` 返回的都是 AI 消息（role: "assistant"），不是用户消息！
 
-1. 调用 `sessions_history(sessionKey="agent:main:main", limit=30)` 获取最近消息
-2. 找出最后一条来自用户的消息的时间戳（注意不是代理的消息！）
-3. 计算 `minutesSinceLastUser = 当前时间 - 那个时间戳`（分钟）
-4. **如果找不到用户消息**（用户从未在此会话发消息），则使用 thinking-state.json 中的 lastUserMessage
+**正确做法**：直接读 `thinking-state.json` 中的 `lastUserMessage`（由 WAL Protocol 实时更新）
+
+1. 读取 `~/.openclaw/workspace/thinking-state.json` 获取 `lastUserMessage`
+2. 计算 `minutesSinceLastUser = (当前时间 - lastUserMessage) / 60000`（分钟）
+
+**为什么这样可行**：
+- WAL Protocol 每次收到用户消息时会立即更新 `lastUserMessage`
+- 比等待 cron 触发 sessions_history 更可靠、更快
 
 ## 第三步：读取当前状态
 
@@ -23,7 +27,7 @@
 - microHeartbeatEnabled
 - microHeartbeatCronId（微触发思考的 cron ID）
 
-## 第四步：逻辑判断（使用 sessions_history 的时间！）
+## 第四步：逻辑判断（使用 lastUserMessage 的时间！）
 
 **如果用户超过 30 分钟没消息 且 microHeartbeatEnabled = false**：
 - 用 `cron update` 启用微触发思考 cron：

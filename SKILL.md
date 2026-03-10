@@ -1,8 +1,8 @@
 ﻿---
 name: living-agent
-version: 1.1.6
-description: "让 Agent 既「有用」又「活着」——融合存在主义与实用主义。动态存在三角形 + WAL Protocol + Working Buffer + 自主思考探索。"
-author: 花生 & Lin
+version: 1.2.0
+description: "让 Agent 既「有用」又「活着」——融合存在主义与实用主义。动态存在三角形 + WAL Protocol + Working Buffer + 自主思考探索。v2: 0秒延迟微触发检测"
+author: OpenClaw Community
 repository: https://github.com/openclaw/skills
 keywords:
   - openclaw
@@ -80,34 +80,70 @@ keywords:
 
 ## 核心组件
 
-### 1. 微触发管理器（Micro-Trigger Manager）
+### 1. 微触发管理器（Micro-Trigger Manager）v2
 
 **作用**：检测用户状态，动态调整思考频率
 
-**检测方式**（推荐）：
-```python
-# 从 thinking-state.json 读取
-state = read_json("~/.openclaw/workspace/thinking-state.json")
-last_msg = state["lastUserMessage"]  # 毫秒时间戳
-idle_minutes = (now() - last_msg) / 60000
+**v2 核心改进**：直接读 `sessions_history` 获取用户时间，0 秒延迟检测用户回来！
 
-if idle_minutes > 30:
-    enable_micro_heartbeat()
-else:
-    disable_micro_heartbeat()
+#### 第一步：检查静默时段
+
+1. 读取 `thinking-state.json` 获取 `silentHours`
+2. 如果在静默时段内，直接结束
+
+#### 第二步：获取用户最后消息时间
+
+**重要**：`sessions_history` 返回的都是 AI 消息（role: "assistant"），不是用户消息！
+
+**正确做法**：直接读 `thinking-state.json` 中的 `lastUserMessage`（由 WAL Protocol 实时更新）
+
+```python
+# 读取 thinking-state.json
+state = read_json("~/.openclaw/workspace/thinking-state.json")
+last_user_msg_time = state["lastUserMessage"]  # 毫秒时间戳
+
+# 计算空闲时间
+minutesSinceLastUser = (now() - last_user_msg_time) / 60000
 ```
 
-**⚠️ 重要**：依赖 `lastUserMessage` 字段。确保在 WAL Protocol 的 "First Thing First" 步骤中更新它。
+**为什么这样可行**：
+- WAL Protocol 每次收到用户消息时会立即更新 `lastUserMessage`
+- 比等待 cron 触发 sessions_history 更可靠、更快
 
-**逻辑**：
+#### 第三步：读取当前状态
+
+读取 `thinking-state.json` 获取：
+- `microHeartbeatEnabled`
+- `microHeartbeatCronId`
+
+#### 第四步：逻辑判断
+
 ```python
-if minutes_since_last_user > 30:
-    # 用户离开，启动微触发模式
-    interval = random(15, 30) * 60 * 1000  # 15-30 分钟
-    enable_micro_heartbeat()
+if minutesSinceLastUser > 30 and not microHeartbeatEnabled:
+    # 用户离开 >30 分钟，启动微触发
+    interval = random(5, 15) * 60 * 1000  # 5-15 分钟
+    cron.update(cronId, enabled=True, everyMs=interval)
+    state["microHeartbeatEnabled"] = True
+
+elif minutesSinceLastUser <= 30 and microHeartbeatEnabled:
+    # 用户回来了！立即停止微触发
+    cron.update(cronId, enabled=False)
+    state["microHeartbeatEnabled"] = False
+    state["lastUserMessage"] = last_user_msg_time
+```
+
+#### 第五步：动态调整检查间隔（v2 新增）
+
+```python
+# 根据用户最后消息时间，调整自己下次检查的间隔
+if minutesSinceLastUser < 5:
+    next_interval = 10 分钟
+elif 5 <= minutesSinceLastUser < 30:
+    next_interval = 5 分钟  # 开始警觉
 else:
-    # 用户在线，保持响应模式
-    disable_micro_heartbeat()
+    next_interval = 10 分钟  # 微触发模式已启动
+
+cron.update(自己的cronId, everyMs=next_interval * 60000)
 ```
 
 **自动发现问题机制**（v1.1.0 新增）：
