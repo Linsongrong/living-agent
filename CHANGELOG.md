@@ -2,6 +2,78 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2026-03-11
+
+### Added
+- **健康检查脚本** (`scripts/health_check.py`)：一键检查 Living Agent 运行状态
+  - 检查 lastUserMessage 是否异常
+  - 检查用户空闲时间
+  - 检查微触发状态
+  - 检查静默时段
+  - 检查每日思考限额
+  - 检查能量和情绪（如果启用）
+  - 检查目录和文件完整性
+
+- **自动修复脚本** (`scripts/auto_fix.py`)：自动检测并修复常见问题
+  - 修复异常的 lastUserMessage（超过 7 天）
+  - 补全缺失的配置字段
+
+- **一键安装脚本** (`scripts/install.sh`)：简化安装流程
+  - 自动检测 agent ID
+  - 复制配置文件
+  - 创建必要目录
+  - 智能配置时区
+  - 输出 cron 创建命令
+
+- **简化版 README.md**：5 分钟快速上手指南
+  - 核心理念
+  - 快速安装
+  - 常用命令
+  - 故障排除
+
+### Changed
+- 文档结构优化：
+  - `README.md` - 快速上手（5 分钟）
+  - `SKILL.md` - 完整设计文档
+  - 移除冗余内容
+
+### Fixed
+- 无
+
+---
+
+## [2.0.1] - 2026-03-10
+
+### Added
+- **第零步：切换工作目录**：所有 payload 模板都加上了 `cd ~/.openclaw/workspace` 步骤
+- 解决 cron 运行时 cwd 不正确导致 agent ID 检测错误的问题
+
+### Changed
+- 在每个 payload 文件开头添加工作目录切换步骤和说明
+
+---
+
+## [2.0.0] - 2026-03-10
+
+### Added
+- **动态 agent ID 检测**：根据 cwd 自动识别 agent ID，不再硬编码
+- **能量与情绪系统**：
+  - 能量消耗（微触发 -5，梦境 -20，探索 -10）
+  - 情绪变化（curious/tired/focused/chill）
+  - 静默期自动恢复能量
+- **Python 模块化**：
+  - `utils.py` - 动态 agent ID 检测
+  - `breaker.py` - 静默时段和每日限额
+  - `vital_signs.py` - 能量和情绪管理
+  - `thinking_lock.py` - 思考锁
+  - `state_manager.py` - 状态读写
+
+### Changed
+- **零配置目标**：skill 更"开箱即用"
+- **独立人格支持**：每个 agent 可以有独立的状态文件
+
+---
+
 ## [1.1.6] - 2026-03-10
 
 ### Fixed

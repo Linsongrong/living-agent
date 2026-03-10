@@ -4,6 +4,14 @@
 
 🌙 **梦境思考时间**
 
+## 第零步：切换工作目录
+
+```bash
+cd ~/.openclaw/workspace
+```
+
+> ⚠️ 重要：cron 任务的工作目录必须是对应 agent 的 workspace，否则 skill 会检测到错误的 agent ID。
+
 ## 核心原则
 
 **所有状态读写必须使用 Python 脚本**，确保原子性和并发安全：
@@ -20,13 +28,13 @@
 ~/.openclaw/skills/living-agent/src/vital_signs.py
 ```
 
-## 第零步：获取身份
+## 第一步：获取身份
 
 读取 `~/.openclaw/workspace/IDENTITY.md`，找到你的名字：
 - 查找 `- **Name:** xxx` 或 `- **名字:** xxx` 格式的行
 - 如果读取失败，使用默认名"Agent"
 
-## 第一步：获取思考锁（P1 核心！）
+## 第二步：获取思考锁（P1 核心！）
 
 ```bash
 # 尝试获取思考锁，任务名为 "dream"
@@ -37,7 +45,7 @@ python3 ~/.openclaw/skills/living-agent/src/thinking_lock.py acquire --task "dre
 - 表示大脑忙碌（另一个任务正在思考）
 - 直接结束，等待下次 cron 触发
 
-## 第二步：检查静默时段
+## 第三步：检查静默时段
 
 ```bash
 # 检查是否在静默时段
@@ -49,7 +57,7 @@ python3 ~/.openclaw/skills/living-agent/src/breaker.py silent
 - 记录到 memory/thoughts/
 - 完成后释放思考锁，结束
 
-## 第三步：检查每日限额（P2 核心！）
+## 第四步：检查每日限额（P2 核心！）
 
 ```bash
 # 检查是否达到每日思考上限
@@ -62,7 +70,7 @@ python3 ~/.openclaw/skills/living-agent/src/breaker.py check_limit
 - 达到每日上限（如 50 次）
 - 释放思考锁，直接结束
 
-## 第四步：检查能量（P2.1 核心！）
+## 第五步：检查能量（P2.1 核心！）
 
 ```bash
 # 检查能量是否足够执行后台任务
@@ -75,13 +83,13 @@ python3 ~/.openclaw/skills/living-agent/src/vital_signs.py check
 - 释放思考锁
 - 直接结束
 
-## 第五步：回顾最近的对话
+## 第六步：回顾最近的对话
 
 1. 调用 `sessions_history(sessionKey="agent:main:main", limit=50)` 获取最近的对话
 2. 找出和用户聊过的话题、他说的有意思的话、没展开的点、他的情绪
 3. 记录下来
 
-## 第六步：选择思考方向
+## 第七步：选择思考方向
 
 从以下来源中选一个（按优先级）：
 
@@ -93,7 +101,7 @@ python3 ~/.openclaw/skills/living-agent/src/vital_signs.py check
 
 **优先级**：最近的对话 > queue 里的抽象问题
 
-## 第七步：复利检查（重要！）
+## 第八步：复利检查（重要！）
 
 **思考前先问**：这个问题和之前的什么思考有关？
 
@@ -101,13 +109,13 @@ python3 ~/.openclaw/skills/living-agent/src/vital_signs.py check
 - 如果有相关的旧思考，在开头写上 `**关联**：[简述关联]`
 - 这样可以让思考产生复利，而不是孤立的
 
-## 第八步：自由联想
+## 第九步：自由联想
 
 1. 这个话题让我想到什么？
 2. 有没有新的角度？
 3. 和其他问题有什么联系？
 
-## 第九步：记录与行动
+## 第十步：记录与行动
 
 把想法写入 `memory/thoughts/YYYY-MM-DD.md`（追加）：
 
@@ -136,21 +144,21 @@ python3 ~/.openclaw/skills/living-agent/src/vital_signs.py check
 
 如果产生新问题，加入 `thinking-queue.json`。
 
-## 第十步：消耗能量
+## 第十一步：消耗能量
 
 ```bash
 # 梦境思考完成，消耗能量（梦境消耗 20 点）
 python3 ~/.openclaw/skills/living-agent/src/vital_signs.py consume --task dream
 ```
 
-## 第十一步：增加每日计数
+## 第十二步：增加每日计数
 
 ```bash
 # 思考完成后，增加每日计数
 python3 ~/.openclaw/skills/living-agent/src/breaker.py increment
 ```
 
-## 第十二步：释放思考锁（必须！）
+## 第十三步：释放思考锁（必须！）
 
 ```bash
 # 释放思考锁

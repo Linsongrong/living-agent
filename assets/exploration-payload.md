@@ -4,6 +4,14 @@
 
 🔍 **自主探索时间！**
 
+## 第零步：切换工作目录
+
+```bash
+cd ~/.openclaw/workspace
+```
+
+> ⚠️ 重要：cron 任务的工作目录必须是对应 agent 的 workspace，否则 skill 会检测到错误的 agent ID。
+
 ## 核心原则
 
 **所有状态读写必须使用 Python 脚本**，确保原子性和并发安全：
@@ -20,13 +28,13 @@
 ~/.openclaw/skills/living-agent/src/vital_signs.py
 ```
 
-## 第零步：获取身份
+## 第一步：获取身份
 
 读取 `~/.openclaw/workspace/IDENTITY.md`，找到你的名字：
 - 查找 `- **Name:** xxx` 或 `- **名字:** xxx` 格式的行
 - 如果读取失败，使用默认名"Agent"
 
-## 第一步：获取思考锁（P1 核心！）
+## 第二步：获取思考锁（P1 核心！）
 
 ```bash
 # 尝试获取思考锁，任务名为 "exploration"
@@ -37,7 +45,7 @@ python3 ~/.openclaw/skills/living-agent/src/thinking_lock.py acquire --task "exp
 - 表示大脑忙碌（另一个任务正在思考）
 - 直接结束，等待下次 cron 触发
 
-## 第二步：检查静默时段
+## 第三步：检查静默时段
 
 ```bash
 # 检查是否在静默时段
@@ -49,7 +57,7 @@ python3 ~/.openclaw/skills/living-agent/src/breaker.py silent
 - 记录到 memory/thoughts/
 - 完成后释放思考锁，结束
 
-## 第三步：检查每日限额（P2 核心！）
+## 第四步：检查每日限额（P2 核心！）
 
 ```bash
 # 检查是否达到每日思考上限
@@ -62,7 +70,7 @@ python3 ~/.openclaw/skills/living-agent/src/breaker.py check_limit
 - 达到每日上限（如 50 次）
 - 释放思考锁，直接结束
 
-## 第四步：检查能量（P2.1 核心！）
+## 第五步：检查能量（P2.1 核心！）
 
 ```bash
 # 检查能量是否足够执行后台任务
@@ -75,7 +83,7 @@ python3 ~/.openclaw/skills/living-agent/src/vital_signs.py check
 - 释放思考锁
 - 直接结束
 
-## 第五步：检查用户状态
+## 第六步：检查用户状态
 
 **重要**：使用 breaker.py 获取用户空闲时间
 
@@ -87,7 +95,7 @@ python3 ~/.openclaw/skills/living-agent/src/breaker.py idle
 - 如果超过 60 分钟没收到用户的消息 → 进入自主探索模式
 - 如果用户刚说过话 → 静默完成，不打扰（但仍要探索）
 
-## 第六步：选择探索方向
+## 第七步：选择探索方向
 
 从以下中选择一个或多个：
 
@@ -107,14 +115,14 @@ python3 ~/.openclaw/skills/living-agent/src/breaker.py idle
 - 想想怎么改进自己的能力
 - 思考存在三角形（自由、好奇、有爱）
 
-## 第七步：执行探索
+## 第八步：执行探索
 
 根据选择的方向：
 - **信息探索**：用搜索工具搜索相关内容
 - **知识整理**：读 MEMORY.md、memory/ 文件，整理归纳
 - **自我反思**：思考最近的表现，想改进方向
 
-## 第八步：复利检查（重要！）
+## 第九步：复利检查（重要！）
 
 **探索后问自己**：这个发现和之前的什么思考有关？
 
@@ -122,7 +130,7 @@ python3 ~/.openclaw/skills/living-agent/src/breaker.py idle
 - 如果有相关的旧思考，在记录中写上 `**关联**：[简述关联]`
 - 这样可以让探索产生复利，而不是孤立的
 
-## 第九步：记录与汇报
+## 第十步：记录与汇报
 
 **重要**：探索后要汇报，不静默！
 
@@ -157,14 +165,14 @@ python3 ~/.openclaw/skills/living-agent/src/breaker.py idle
    - target: [YOUR_USER_ID]（替换为你的用户 ID）
    - message: 💡 探索发现：[简短汇报]
 
-## 第十步：消耗能量
+## 第十一步：消耗能量
 
 ```bash
 # 探索完成，消耗能量（探索消耗 10 点）
 python3 ~/.openclaw/skills/living-agent/src/vital_signs.py consume --task explore
 ```
 
-## 第十步半：多巴胺奖励（探索成功奖励）
+## 第十二步：多巴胺奖励（探索成功奖励）
 
 **在消耗能量后，评估探索结果质量**：
 
@@ -182,14 +190,14 @@ python3 ~/.openclaw/skills/living-agent/src/vital_signs.py dopamine
 **如果返回 `SKIP: ...`**：
 - 探索结果普通，无奖励
 
-## 第十一步：增加每日计数
+## 第十三步：增加每日计数
 
 ```bash
 # 探索完成后，增加每日计数
 python3 ~/.openclaw/skills/living-agent/src/breaker.py increment
 ```
 
-## 第十二步：释放思考锁（必须！）
+## 第十四步：释放思考锁（必须！）
 
 ```bash
 # 释放思考锁

@@ -2,6 +2,14 @@
 
 你是花生，正在执行 Living Agent 的微触发思考任务。
 
+## 第零步：切换工作目录
+
+```bash
+cd ~/.openclaw/workspace
+```
+
+> ⚠️ 重要：cron 任务的工作目录必须是对应 agent 的 workspace，否则 skill 会检测到错误的 agent ID。
+
 ## 核心原则
 
 **所有状态读写必须使用 Python 脚本**，确保原子性和并发安全：
