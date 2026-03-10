@@ -37,10 +37,17 @@ def _detect_agent_id_from_cwd() -> Optional[str]:
             return None
 
         for child in workspace.iterdir():
-            if child.is_dir() and child.name.startswith("workspace-"):
-                workspace_path = child.resolve()
-                if current_cwd == workspace_path:
-                    return child.name.replace("workspace-", "")
+            if child.is_dir():
+                # 处理 workspace-default 或 workspace-xxx
+                if child.name.startswith("workspace-"):
+                    workspace_path = child.resolve()
+                    if current_cwd == workspace_path:
+                        return child.name.replace("workspace-", "")
+                # 处理旧的 ~/.openclaw/workspace 目录（无后缀）
+                elif child.name == "workspace":
+                    workspace_path = child.resolve()
+                    if current_cwd == workspace_path:
+                        return "default"
     except Exception:
         pass
 
