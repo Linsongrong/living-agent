@@ -8,11 +8,12 @@ import sys
 import time
 from pathlib import Path
 
-# 添加 src 到路径
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+# 添加 skill 根目录到路径，使 src 成为可导入的包
+skill_root = Path(__file__).parent.parent
+sys.path.insert(0, str(skill_root))
 
-from utils import get_state_file_path, read_json_file, write_json_file, get_current_timestamp_ms
-from breaker import update_last_user_message
+from src.utils import get_state_file_path, read_json_file, write_json_file, get_current_timestamp_ms
+from src.breaker import update_last_user_message
 
 
 def fix_last_user_message():
@@ -71,6 +72,11 @@ def fix_missing_fields():
 
 
 def main():
+    # Windows PowerShell UTF-8 编码修复
+    if sys.platform == "win32":
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    
     print("🔧 Living Agent 自动修复\n")
     
     # 检查配置文件是否存在

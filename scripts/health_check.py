@@ -9,11 +9,12 @@ import time
 from pathlib import Path
 from datetime import datetime, timedelta
 
-# 添加 src 到路径
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+# 添加 skill 根目录到路径，使 src 成为可导入的包
+skill_root = Path(__file__).parent.parent
+sys.path.insert(0, str(skill_root))
 
-from utils import get_state_file_path, read_json_file, get_current_timestamp_ms
-from breaker import get_user_idle_minutes, is_in_silent_hours, check_daily_limit
+from src.utils import get_state_file_path, read_json_file, get_current_timestamp_ms
+from src.breaker import get_user_idle_minutes, is_in_silent_hours, check_daily_limit
 
 
 def format_time_ago(ms_ago):
@@ -39,6 +40,11 @@ def check_cron_status():
 
 
 def main():
+    # Windows PowerShell UTF-8 编码修复
+    if sys.platform == "win32":
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    
     print("🦞 Living Agent 健康检查\n")
     
     # 1. 检查配置文件
