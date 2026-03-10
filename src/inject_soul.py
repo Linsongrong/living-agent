@@ -8,6 +8,7 @@ import json
 import argparse
 
 from .vital_signs import get_vital_signs, get_foreground_prompt_snippet
+from .breaker import update_last_user_message
 
 
 def inject_soul() -> str:
@@ -15,6 +16,7 @@ def inject_soul() -> str:
     生成前台任务所需的灵魂注入片段
 
     包含：
+    - 自动更新 lastUserMessage（用户发送消息时）
     - 当前能量值
     - 当前情绪
     - 绝对指令（必须专业响应）
@@ -23,6 +25,9 @@ def inject_soul() -> str:
     Returns:
         可注入到 System Prompt 的文本片段
     """
+    # 自动更新最后用户消息时间（内置 WAL 功能）
+    update_last_user_message()
+
     return get_foreground_prompt_snippet()
 
 

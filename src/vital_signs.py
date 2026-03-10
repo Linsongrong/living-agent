@@ -14,7 +14,7 @@ from .utils import (
     read_json_file,
     write_json_file,
     get_current_timestamp_ms,
-    expand_path,
+    get_chat_history_path,
 )
 from .breaker import is_in_silent_hours
 
@@ -297,7 +297,7 @@ def _get_latest_user_message() -> str:
         用户消息文本，如果没有则返回空字符串
     """
     # 尝试读取 chat_history.json
-    chat_history_path = expand_path("~/.openclaw/workspace/chat_history.json")
+    chat_history_path = get_chat_history_path()
 
     if not chat_history_path.exists():
         return ""

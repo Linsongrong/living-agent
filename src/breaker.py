@@ -8,7 +8,7 @@ import argparse
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 
-from .utils import get_lock, get_state_file_path, get_current_date, get_current_timestamp_ms, expand_path, read_json_file, write_json_file
+from .utils import get_lock, get_state_file_path, get_current_date, get_current_timestamp_ms, get_chat_history_path, get_sessions_history_path, expand_path, read_json_file, write_json_file
 
 
 # 默认配置
@@ -178,12 +178,11 @@ def get_user_last_active_time() -> Optional[int]:
     """
     # 尝试读取 OpenClaw 的聊天历史文件
     possible_paths = [
-        "~/.openclaw/workspace/chat_history.json",
-        "~/.openclaw/workspace/sessions_history.json",
+        get_chat_history_path(),
+        get_sessions_history_path(),
     ]
 
-    for path_str in possible_paths:
-        path = expand_path(path_str)
+    for path in possible_paths:
         if path.exists():
             mtime = int(path.stat().st_mtime * 1000)
             return mtime
@@ -227,10 +226,36 @@ def get_user_idle_minutes() -> int:
     return 9999
 
 
+def update_last_user_message() -> bool:
+    """
+    更新最后用户消息时间
+
+    当用户发送消息时，自动调用此函数更新 lastUserMessage
+
+    Returns:
+        是否更新成功
+    """
+    lock = get_lock()
+    try:
+        lock.acquire(timeout=5)
+    except Exception:
+        return False
+
+    try:
+        state = read_json_file(get_state_file_path())
+        current_time = get_current_timestamp_ms()
+        state['lastUserMessage'] = current_time
+        write_json_file(get_state_file_path(), state)
+        return True
+    finally:
+        if lock.is_locked:
+            lock.release()
+
+
 # CLI 接口
 def main():
     parser = argparse.ArgumentParser(description="防破产与时区管理")
-    parser.add_argument('action', choices=['check_limit', 'increment', 'silent', 'idle', 'local_time'],
+    parser.add_argument('action', choices=['check_limit', 'increment', 'silent', 'idle', 'local_time', 'update_last_user_message'],
                         help='操作类型')
 
     args = parser.parse_args()
@@ -258,6 +283,14 @@ def main():
     elif args.action == 'local_time':
         local = get_user_local_time()
         print(local.strftime("%Y-%m-%d %H:%M:%S"))
+
+    elif args.action == 'update_last_user_message':
+        success = update_last_user_message()
+        if success:
+            print("OK")
+        else:
+            print("FAILED")
+            sys.exit(1)
 
 
 if __name__ == '__main__':
