@@ -23,7 +23,7 @@ def _detect_agent_id_from_cwd() -> Optional[str]:
     自动检测 Agent ID（根据当前工作目录）
 
     原理：
-    - 工作目录是 ~/.openclaw/workspace/ → "default"
+    - 工作目录是 ~/.openclaw/workspace/ → "main"
     - 工作目录是 ~/.openclaw/workspace-guapi/ → "guapi"
 
     Returns:
@@ -38,16 +38,16 @@ def _detect_agent_id_from_cwd() -> Optional[str]:
 
         for child in workspace.iterdir():
             if child.is_dir():
-                # 处理 workspace-default 或 workspace-xxx
+                # 处理 workspace-xxx
                 if child.name.startswith("workspace-"):
                     workspace_path = child.resolve()
                     if current_cwd == workspace_path:
                         return child.name.replace("workspace-", "")
-                # 处理旧的 ~/.openclaw/workspace 目录（无后缀）
+                # 处理 ~/.openclaw/workspace 目录（主 workspace）
                 elif child.name == "workspace":
                     workspace_path = child.resolve()
                     if current_cwd == workspace_path:
-                        return "default"
+                        return "main"
     except Exception:
         pass
 
@@ -102,7 +102,12 @@ def get_workspace_dir(agent_id: str = None) -> Path:
     """
     if agent_id is None:
         agent_id = get_agent_id()
-    return expand_path(f"~/.openclaw/workspace-{agent_id}")
+    
+    # 特殊处理：如果 agent_id 是 "main"，使用 workspace 目录
+    if agent_id == "main":
+        return expand_path("~/.openclaw/workspace")
+    else:
+        return expand_path(f"~/.openclaw/workspace-{agent_id}")
 
 
 def get_state_file_path(agent_id: str = None) -> Path:
