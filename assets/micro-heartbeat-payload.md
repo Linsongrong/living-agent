@@ -1,4 +1,4 @@
-# 微触发思考 Payload (v2)
+﻿# 微触发思考 Payload (v2)
 
 你正在执行 Living Agent 的微触发思考任务。
 

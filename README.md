@@ -1,4 +1,4 @@
-# Living Agent 🦞
+﻿# Living Agent 🦞
 
 > 让 Agent 既「有用」又「活着」——融合存在主义与实用主义
 

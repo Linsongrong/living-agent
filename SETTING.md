@@ -1,4 +1,4 @@
-# Living Agent 设置指南
+﻿# Living Agent 设置指南
 
 在开始使用前，需要完成以下设置：
 
