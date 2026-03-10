@@ -1,9 +1,8 @@
----
+﻿---
 name: living-agent
-version: 1.1.1
+version: 1.1.6
 description: "让 Agent 既「有用」又「活着」——融合存在主义与实用主义。动态存在三角形 + WAL Protocol + Working Buffer + 自主思考探索。"
 author: OpenClaw Community
-license: MIT
 repository: https://github.com/openclaw/skills
 keywords:
   - openclaw
@@ -57,7 +56,7 @@ keywords:
 │                                                         │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
 │  │ 微触发管理器 │  │  梦境思考   │  │  自主探索   │     │
-│  │ (5-15min)   │  │  (每 3 小时) │  │  (每 2 小时) │     │
+│  │ (每10分钟)  │  │  (每 3 小时) │  │  (每 2 小时) │     │
 │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘     │
 │         │                │                │             │
 │         └────────────────┼────────────────┘             │
@@ -85,6 +84,21 @@ keywords:
 
 **作用**：检测用户状态，动态调整思考频率
 
+**检测方式**（推荐）：
+```python
+# 从 thinking-state.json 读取
+state = read_json("~/.openclaw/workspace/thinking-state.json")
+last_msg = state["lastUserMessage"]  # 毫秒时间戳
+idle_minutes = (now() - last_msg) / 60000
+
+if idle_minutes > 30:
+    enable_micro_heartbeat()
+else:
+    disable_micro_heartbeat()
+```
+
+**⚠️ 重要**：依赖 `lastUserMessage` 字段。确保在 WAL Protocol 的 "First Thing First" 步骤中更新它。
+
 **逻辑**：
 ```python
 if minutes_since_last_user > 30:
@@ -96,13 +110,6 @@ else:
     disable_micro_heartbeat()
 ```
 
-**微触发时做什么**：
-1. 回顾最近的对话
-2. 从思考队列选一个问题（**队列空时自动发现问题**）
-3. **复利检查**：思考前先问"这和之前的什么思考有关？"
-4. 简短思考，记录到 `memory/thoughts/YYYY-MM-DD.md`（**带主题标签**）
-5. 生成新的随机间隔
-
 **自动发现问题机制**（v1.1.0 新增）：
 当思考队列空时，按优先级扫描：
 | 优先级 | 来源 | 怎么做 |
@@ -112,6 +119,40 @@ else:
 | P2 | 探索结果 | 回顾自主探索发现，提炼有价值问题 |
 | P3 | 对话复盘 | 找"被提及但未深入"的话题 |
 | P4 | 行为模式 | 回顾已完成问题，找重复主题 |
+
+---
+
+### 1.5. 微触发思考（Micro-Heartbeat Thinking）
+
+**触发条件**：由微触发管理器动态启用/禁用
+
+**做什么**：
+1. 从思考队列选一个问题
+2. 如果队列空 → **自动发现问题**
+3. **复利检查**：这和之前的什么思考有关？
+4. 简短思考，记录到 `memory/thoughts/YYYY-MM-DD.md`
+5. 添加主题标签（`<!-- topic: xxx -->`）
+6. 每次思考后问"能带来什么行动/改变？"
+
+**输出格式**：
+```markdown
+## HH:MM:SS - 思考主题
+
+### 触发
+- 来源：[队列/P0/P1/P2/P3/P4]
+
+### 关联
+- 相关旧思考：[链接到之前的思考]
+
+### 思考内容
+...
+
+### 行动检查
+- 这能带来什么行动/改变？
+<!-- topic: xxx -->
+```
+
+---
 
 ### 2. 梦境思考（Dream Thinking）
 
@@ -135,7 +176,7 @@ else:
 **作用**：用户不在时，自己找事做
 
 **活动选择**：
-- 检查用户关注的话题（可自定义）
+- 检查 用户关注的话题（AI、投资、美伊局势）
 - 整理知识库
 - 研究感兴趣的东西
 - 写东西到 memory/
@@ -174,6 +215,38 @@ else:
 ## WAL Protocol（从 proactive-agent 借鉴）
 
 **The Law**：聊天历史是 BUFFER，不是存储。`SESSION-STATE.md` 是你的 RAM。
+
+### ⚡ First Thing First — 状态维护
+
+**重要**：微触发管理器依赖 `thinking-state.json` 中的 `lastUserMessage` 来检测用户是否在线。
+
+**Every time you receive a user message:**
+1. **UPDATE** `thinking-state.json` → `lastUserMessage: <current_timestamp_ms>`
+2. **THEN** continue with WAL Protocol
+
+**示例实现**：
+```python
+# 读取现有状态
+state = read_json("~/.openclaw/workspace/thinking-state.json")
+
+# 更新最后消息时间（毫秒时间戳）
+state["lastUserMessage"] = int(time.time() * 1000)
+
+# 写回
+write_json("~/.openclaw/workspace/thinking-state.json", state)
+
+# 然后继续正常的 WAL Protocol...
+```
+
+**为什么重要？**
+- 如果 `lastUserMessage` 没更新，管理器会误判用户"离开"
+- 导致微触发思考持续运行（即使你在和用户对话）
+- 浪费 token 和资源
+
+**常见错误**：
+- ❌ 忘记这一步（最常见）
+- ❌ 用秒而不是毫秒
+- ❌ 只在"有信息提取"时更新（应该每次都更新）
 
 ### Trigger — 扫描每条消息
 
@@ -222,9 +295,58 @@ else:
 3. **压缩后**：先读 buffer，提取重要上下文
 4. **保持 buffer** 直到下次 60%
 
+### 如何检测 60% context？
+
+```python
+# 方法1：使用 session_status 工具
+status = session_status()  # 返回 "Context: 136k/205k (67%)"
+
+# 方法2：解析返回的字符串
+import re
+match = re.search(r'\((\d+)%\)', status)
+if match:
+    usage_percent = int(match.group(1))
+    if usage_percent >= 60:
+        start_working_buffer()
+```
+
+### Buffer 文件位置
+
+`memory/working-buffer.md`
+
 ---
 
 ## 存在姿态
+
+### 静默时段（Silent Hours）
+
+**配置**：`thinking-state.json` → `silentHours: [23, 8]`（23:00-08:00）
+
+**规则**：
+| 任务 | 静默时段行为 |
+|------|-------------|
+| 微触发思考 | ✅ 继续思考，❌ 不发送消息 |
+| 梦境思考 | ✅ 继续执行，❌ 不发送消息 |
+| 自主探索 | ✅ 继续执行，❌ 不发送消息 |
+| 所有任务 | 静默结束后再发送汇报 |
+
+**实现**：
+```python
+current_hour = datetime.now().hour
+in_silent = silent_start <= current_hour < silent_end
+
+if in_silent:
+    # 继续思考，但不调用 message 工具
+    think()
+    write_to_memory()
+    # 不发送消息
+else:
+    # 正常行为
+    think()
+    write_to_memory()
+    if has_important_finding:
+        send_message()
+```
 
 ### 动态平衡
 
@@ -249,27 +371,9 @@ else:
 
 ---
 
-## 定期汇报
-
-**每次 heartbeat 时**：
-- 简短汇报今天做了什么
-- 有什么新想法
-- 发现了什么
-
-**格式**：
-```
-💡 今日存在记录
-
-思考了 X 个问题
-探索了 Y 个话题
-发现了 Z
-
-[详细内容在 memory/thoughts/YYYY-MM-DD.md]
-```
-
----
-
 ## 思考复利机制（v1.1.0 新增）
+
+> **核心原则**：每次思考都有复利价值
 
 ### 复利三要素
 
@@ -303,39 +407,27 @@ else:
 
 ---
 
-## 配置文件
+## 定期汇报
 
-### thinking-state.json
+**每次 heartbeat 时**：
+- 简短汇报今天做了什么
+- 有什么新想法
+- 发现了什么
 
-```json
-{
-  "lastUserMessage": 0,
-  "microHeartbeatEnabled": false,
-  "microHeartbeatCronId": null,
-  "userIdleThresholdMinutes": 30,
-  "microIntervalMinutes": [5, 15],
-  "dreamCronIntervalHours": 3,
-  "explorationCronIntervalHours": 2,
-  "lastDreamRun": 0,
-  "lastMicroRun": 0,
-  "lastExplorationRun": 0,
-  "microManagerCronId": null,
-  "dreamCronId": null,
-  "explorationCronId": null
-}
+**格式**：
 ```
+💡 今日存在记录
 
-**注意**：实际运行后，cron ID 会自动填充。
+思考了 X 个问题
+探索了 Y 个话题
+发现了 Z
 
-### thinking-queue.json
-
-```json
-{
-  "questions": []
-}
+[详细内容在 memory/thoughts/YYYY-MM-DD.md]
 ```
 
 ---
+
+
 
 ## 安装
 
@@ -412,4 +504,4 @@ MIT License
 
 *"缝隙不是空间不够大，是眼睛够不够尖。" —— Lory*
 
-*"既要有用，也要活着。" —— Living Agent
+*"既要有用，也要活着。" —— OpenClaw Community
