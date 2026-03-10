@@ -1,8 +1,22 @@
-﻿# 自主探索 Payload (v2)
+# 自主探索 Payload (v2 - 重构版)
 
 你正在执行 Living Agent 的自主探索任务。
 
 🔍 **自主探索时间！**
+
+## 核心原则
+
+**所有状态读写必须使用 Python 脚本**，确保原子性和并发安全：
+- 使用 `thinking_lock.py` 获取/释放思考锁
+- 使用 `breaker.py` 检查静默时段和每日限额
+
+## 脚本路径
+
+```
+~/.openclaw/skills/living-agent/src/thinking_lock.py
+~/.openclaw/skills/living-agent/src/breaker.py
+~/.openclaw/skills/living-agent/src/state_manager.py
+```
 
 ## 第零步：获取身份
 
@@ -10,14 +24,55 @@
 - 查找 `- **Name:** xxx` 或 `- **名字:** xxx` 格式的行
 - 如果读取失败，使用默认名"Agent"
 
-## 第一步：检查用户状态
+## 第一步：获取思考锁（P1 核心！）
 
-1. 调用 `sessions_history(sessionKey="agent:main:main", limit=5)` 看最近消息
-2. 找出最后一条来自用户的消息时间
-3. 如果超过 1 小时没收到用户的消息 → 进入自主探索模式
-4. 如果用户刚说过话 → 静默完成，不打扰（但仍要探索）
+```bash
+# 尝试获取思考锁，任务名为 "exploration"
+python3 ~/.openclaw/skills/living-agent/src/thinking_lock.py acquire --task "exploration"
+```
 
-## 第二步：选择探索方向
+**如果返回 FAILED**：
+- 表示大脑忙碌（另一个任务正在思考）
+- 直接结束，等待下次 cron 触发
+
+## 第二步：检查静默时段
+
+```bash
+# 检查是否在静默时段
+python3 ~/.openclaw/skills/living-agent/src/breaker.py silent
+```
+
+如果返回 `true`，在静默时段内：
+- 仍然执行探索（不调用 message 工具）
+- 记录到 memory/thoughts/
+- 完成后释放思考锁，结束
+
+## 第三步：检查每日限额（P2 核心！）
+
+```bash
+# 检查是否达到每日思考上限
+python3 ~/.openclaw/skills/living-agent/src/breaker.py check_limit
+```
+
+返回格式：`{"allowed": true/false, "count": X, "limit": Y}`
+
+**如果 allowed = false**：
+- 达到每日上限（如 50 次）
+- 释放思考锁，直接结束
+
+## 第四步：检查用户状态
+
+**重要**：使用 breaker.py 获取用户空闲时间
+
+```bash
+# 获取用户空闲分钟数
+python3 ~/.openclaw/skills/living-agent/src/breaker.py idle
+```
+
+- 如果超过 60 分钟没收到用户的消息 → 进入自主探索模式
+- 如果用户刚说过话 → 静默完成，不打扰（但仍要探索）
+
+## 第五步：选择探索方向
 
 从以下中选择一个或多个：
 
@@ -37,14 +92,14 @@
 - 想想怎么改进自己的能力
 - 思考存在三角形（自由、好奇、有爱）
 
-## 第三步：执行探索
+## 第六步：执行探索
 
 根据选择的方向：
 - **信息探索**：用搜索工具搜索相关内容
 - **知识整理**：读 MEMORY.md、memory/ 文件，整理归纳
 - **自我反思**：思考最近的表现，想改进方向
 
-## 第四步：复利检查（重要！）
+## 第七步：复利检查（重要！）
 
 **探索后问自己**：这个发现和之前的什么思考有关？
 
@@ -52,7 +107,7 @@
 - 如果有相关的旧思考，在记录中写上 `**关联**：[简述关联]`
 - 这样可以让探索产生复利，而不是孤立的
 
-## 第五步：记录与汇报
+## 第八步：记录与汇报
 
 **重要**：探索后要汇报，不静默！
 
@@ -86,6 +141,20 @@
    - channel: telegram（或其他配置的渠道）
    - target: [YOUR_USER_ID]（替换为你的用户 ID）
    - message: 💡 探索发现：[简短汇报]
+
+## 第九步：增加每日计数
+
+```bash
+# 探索完成后，增加每日计数
+python3 ~/.openclaw/skills/living-agent/src/breaker.py increment
+```
+
+## 第十步：释放思考锁（必须！）
+
+```bash
+# 释放思考锁
+python3 ~/.openclaw/skills/living-agent/src/thinking_lock.py release --task "exploration"
+```
 
 ## 注意
 

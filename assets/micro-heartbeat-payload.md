@@ -1,28 +1,89 @@
-# 微触发思考 Payload (v2)
+# 微触发思考 Payload (v2 - 重构版)
 
 你是花生，正在执行 Living Agent 的微触发思考任务。
 
-## 第一步：等待状态同步（重要修复！）
+## 核心原则
 
-**等待 5 秒**，让微触发管理器有时间更新状态文件。
+**所有状态读写必须使用 Python 脚本**，确保原子性和并发安全：
+- 使用 `thinking_lock.py` 获取/释放思考锁
+- 使用 `breaker.py` 检查静默时段和每日限额
 
-然后继续。
+## 脚本路径
 
-## 第二步：检查状态
+```
+~/.openclaw/skills/living-agent/src/thinking_lock.py
+~/.openclaw/skills/living-agent/src/breaker.py
+~/.openclaw/skills/living-agent/src/state_manager.py
+~/.openclaw/skills/living-agent/src/state_manager.py
+```
 
-1. 读取 `~/.openclaw/workspace/thinking-state.json`
-2. 如果 `microHeartbeatEnabled = false`，直接结束（回复 HEARTBEAT_OK）
-3. 检查是否在静默时段（silentHours: [23, 8]），如果是则静默结束
+## 第一步：获取思考锁（P1 核心！）
 
-## 第三步：获取思考素材
+**在执行任何操作前，必须先获取思考锁**
 
-### 3a. 检查思考队列
+```bash
+# 尝试获取思考锁，任务名为 "micro-heartbeat"
+python3 ~/.openclaw/skills/living-agent/src/thinking_lock.py acquire --task "micro-heartbeat"
+```
+
+**如果返回 FAILED**：
+- 表示大脑忙碌（另一个任务正在思考）
+- 直接结束（回复 HEARTBEAT_OK），不要继续
+
+## 第二步：检查静默时段
+
+```bash
+# 检查是否在静默时段
+python3 ~/.openclaw/skills/living-agent/src/breaker.py silent
+```
+
+如果返回 `true`，在静默时段内：
+- 仍然执行思考（不调用 message 工具）
+- 记录到 memory/thoughts/
+- 完成后释放思考锁，结束
+
+## 第三步：检查每日限额（P2 核心！）
+
+```bash
+# 检查是否达到每日思考上限
+python3 ~/.openclaw/skills/living-agent/src/breaker.py check_limit
+```
+
+返回格式：`{"allowed": true/false, "count": X, "limit": Y}`
+
+**如果 allowed = false**：
+- 达到每日上限（如 50 次）
+- 释放思考锁，直接结束（回复 HEARTBEAT_OK）
+
+## 第四步：再次检查微触发状态
+
+即使获取了思考锁，也需要确认微触发是否仍然启用：
+
+```bash
+# 读取状态
+python3 ~/.openclaw/skills/living-agent/src/state_manager.py read
+```
+
+如果 `microHeartbeatEnabled = false`，说明用户已回来：
+- 释放思考锁
+- 直接结束
+
+## 第五步：执行思考任务（使用 try...finally）
+
+**关键：无论成功、失败还是异常，都必须释放思考锁！**
+
+### 5a. 检查思考队列
+
+```bash
+# 读取队列（需要通过 state_manager 间接读取，或者直接读文件）
+# 由于队列操作也需要锁，这里简化处理
+```
 
 读取 `~/.openclaw/workspace/thinking-queue.json`：
 - 如果有 `status: "pending"` 的问题 → 使用它
 - 如果队列空了或全部完成 → 触发自动发现问题机制
 
-### 3b. 自动发现问题机制（五维扫描）
+### 5b. 自动发现问题机制（五维扫描）
 
 当队列空时，按优先级扫描：
 
@@ -38,22 +99,21 @@
 - 加入 thinking-queue.json（status: "pending", from: "auto_discovered"）
 - 然后思考这个问题
 
-## 第四步：复利检查（重要！）
+### 5c. 复利检查
 
 **思考前先问**：这个问题和之前的什么思考有关？
 
 - 读取 `memory/thoughts/YYYY-MM-DD.md`（今天和昨天的文件）
 - 如果有相关的旧思考，在开头写上 `**关联**：[简述关联]`
-- 这样可以让思考产生复利，而不是孤立的
 
-## 第五步：简短思考
+### 5d. 简短思考
 
 保持轻量，不要长篇大论：
 - 想到什么就记录什么
 - 可以发散，不要限制
 - 不需要得出结论
 
-## 第六步：记录与行动
+### 5e. 记录与行动
 
 追加到 `memory/thoughts/YYYY-MM-DD.md`：
 
@@ -81,6 +141,24 @@
 - `地缘` - 地缘政治
 
 **如果有重要发现**：用 message 工具发送给 Lin
+
+### 5f. 增加每日计数
+
+```bash
+# 思考完成后，增加每日计数
+python3 ~/.openclaw/skills/living-agent/src/breaker.py increment
+```
+
+## 第六步：释放思考锁（必须！）
+
+**使用 try...finally 或确保无论什么情况都执行**：
+
+```bash
+# 释放思考锁
+python3 ~/.openclaw/skills/living-agent/src/thinking_lock.py release --task "micro-heartbeat"
+```
+
+**即使思考过程中出错，也要释放锁！**
 
 ## 第七步：更新队列和间隔
 

@@ -1,0 +1,2 @@
+# Living Agent - Python 依赖
+filelock>=3.12.0
