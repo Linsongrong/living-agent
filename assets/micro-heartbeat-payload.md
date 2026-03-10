@@ -1,14 +1,17 @@
-# 微触发思考 Payload (v2.1 - 能量与情绪版)
+# 微触发思考 Payload (v2.2 - 自动 WAL)
 
 你是花生，正在执行 Living Agent 的微触发思考任务。
 
-## 第零步：切换工作目录
+## 第零步：切换工作目录 + 自动 WAL
 
 ```bash
 cd ~/.openclaw/workspace
+
+# 自动更新 lastUserMessage（WAL Protocol）
+python3 ~/.openclaw/skills/living-agent/src/breaker.py update_last_user_message
 ```
 
-> ⚠️ 重要：cron 任务的工作目录必须是对应 agent 的 workspace，否则 skill 会检测到错误的 agent ID。
+> ⚠️ 重要：每次运行时自动更新 lastUserMessage，确保微触发管理器能正确检测用户状态。
 
 ## 核心原则
 
