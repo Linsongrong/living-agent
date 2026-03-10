@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.0] - 2026-03-11
+
+### Added
+- **auto_wal.py**：自动 WAL 更新脚本（从 chat_history.json mtime 检测）
+- **AGENTS.md WAL 提醒**：在主 workspace 的 AGENTS.md 添加 WAL Protocol 提醒
+
+### Changed
+- **优化方向调整**：从"完全自动化"改为"提醒 + 工具"，更可靠
+
+### Note
+- OpenClaw 不存储 chat_history.json，无法从文件自动检测用户消息
+- 最可靠的方案：在 AGENTS.md 提醒，每次收到消息时手动调用工具
+
+---
+
+## [2.2.1] - 2026-03-11
+
+### Fixed
+- **workspace 检测**：main agent 使用 workspace 目录（不是 workspace-main）
+- **花生微触发 cron**：创建并更新为完整版 payload
+
+---
+
 ## [2.2.0] - 2026-03-11
 
 ### Fixed
@@ -14,55 +37,4 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [2.1.3] - 2026-03-11
-
-### Fixed
-- **vital_signs.py 完整恢复**：修复 v2.1.2 误删的 549 行代码
-- **能量机制完整**：发呆、闲聊、多巴胺奖励机制全部恢复
-
----
-
-## [2.1.2] - 2026-03-11 (已废弃)
-
-### Fixed
-- **Python 模块直接运行支持**：所有模块添加 try-except 导入
-
-### Broken
-- ❌ vital_signs.py 被误删 549 行（已在 v2.1.3 修复）
-
----
-
-## [2.1.1] - 2026-03-11
-
-### Fixed
-- **Windows 兼容性**：修复 UTF-8 编码问题和导入路径
-
----
-
-## [2.1.0] - 2026-03-11
-
-### Added
-- **健康检查脚本** (`scripts/health_check.py`)
-- **自动修复脚本** (`scripts/auto_fix.py`)
-- **一键安装脚本** (`scripts/install.sh`)
-- **简化版 README.md**
-
----
-
-## [2.0.1] - 2026-03-10
-
-### Added
-- **第零步：切换工作目录**：所有 payload 模板都加上了 `cd ~/.openclaw/workspace` 步骤
-
----
-
-## [2.0.0] - 2026-03-10
-
-### Added
-- **动态 agent ID 检测**：根据 cwd 自动识别 agent ID
-- **能量与情绪系统**：能量消耗、情绪变化、静默期恢复
-- **Python 模块化**：utils.py, breaker.py, vital_signs.py, thinking_lock.py, state_manager.py
-
----
-
-_Earlier versions omitted for brevity_
+_Earlier versions: see previous CHANGELOG entries_
