@@ -2,7 +2,7 @@
 name: living-agent
 version: 1.1.6
 description: "让 Agent 既「有用」又「活着」——融合存在主义与实用主义。动态存在三角形 + WAL Protocol + Working Buffer + 自主思考探索。"
-author: OpenClaw Community
+author: 花生 & Lin
 repository: https://github.com/openclaw/skills
 keywords:
   - openclaw
@@ -221,7 +221,9 @@ else:
 **重要**：微触发管理器依赖 `thinking-state.json` 中的 `lastUserMessage` 来检测用户是否在线。
 
 **Every time you receive a user message:**
-1. **UPDATE** `thinking-state.json` → `lastUserMessage: <current_timestamp_ms>`
+1. **UPDATE** `thinking-state.json`:
+   - `lastUserMessage: <current_timestamp_ms>`
+   - `microHeartbeatEnabled: false` ← **用户回来了，立即停止微触发！**
 2. **THEN** continue with WAL Protocol
 
 **示例实现**：
@@ -232,6 +234,9 @@ state = read_json("~/.openclaw/workspace/thinking-state.json")
 # 更新最后消息时间（毫秒时间戳）
 state["lastUserMessage"] = int(time.time() * 1000)
 
+# 用户回来了，立即停止微触发！
+state["microHeartbeatEnabled"] = False
+
 # 写回
 write_json("~/.openclaw/workspace/thinking-state.json", state)
 
@@ -239,14 +244,15 @@ write_json("~/.openclaw/workspace/thinking-state.json", state)
 ```
 
 **为什么重要？**
-- 如果 `lastUserMessage` 没更新，管理器会误判用户"离开"
-- 导致微触发思考持续运行（即使你在和用户对话）
-- 浪费 token 和资源
+1. 如果 `lastUserMessage` 没更新，管理器会误判用户"离开"
+2. 设置 `microHeartbeatEnabled = false` 让微触发思考任务**立即**停止，不需要等 cron 检查
+3. 实现真正的"用户发消息时立即停止微触发"，0 秒延迟！
 
 **常见错误**：
 - ❌ 忘记这一步（最常见）
 - ❌ 用秒而不是毫秒
 - ❌ 只在"有信息提取"时更新（应该每次都更新）
+- ❌ 只更新 lastUserMessage，忘记设置 microHeartbeatEnabled
 
 ### Trigger — 扫描每条消息
 
@@ -504,4 +510,4 @@ MIT License
 
 *"缝隙不是空间不够大，是眼睛够不够尖。" —— Lory*
 
-*"既要有用，也要活着。" —— OpenClaw Community
+*"既要有用，也要活着。" —— 花生 & Lin

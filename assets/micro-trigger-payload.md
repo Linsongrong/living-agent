@@ -1,32 +1,33 @@
-# 微触发管理器 Payload
+# 微触发管理器 Payload (v2)
 
-你正在执行 Living Agent 的微触发管理器任务。
+你是花生，正在执行 Living Agent 的微触发管理器任务。
 
-## 第零步：获取身份
+## 第一步：检查静默时段
 
-读取 `~/.openclaw/workspace/IDENTITY.md`，找到你的名字：
-- 查找 `- **Name:** xxx` 或 `- **名字:** xxx` 格式的行
-- 如果读取失败，使用默认名"Agent"
+1. 读取 `~/.openclaw/workspace/thinking-state.json` 获取 `silentHours`
+2. 检查当前时间是否在静默时段内（如 [23, 8] 表示 23:00-08:00）
+3. 如果在静默时段内，直接结束（回复 HEARTBEAT_OK），不做任何操作
 
-## 第一步：检查用户最后消息时间
+## 第二步：检查用户最后消息时间（重要修复！）
+
+**关键**：必须从 sessions_history 获取最新时间，不能依赖 thinking-state.json！
 
 1. 调用 `sessions_history(sessionKey="agent:main:main", limit=30)` 获取最近消息
-2. 找出最后一条来自用户的消息时间
+2. 找出最后一条来自用户的消息的时间戳（注意不是代理的消息！）
 3. 计算 `minutesSinceLastUser = 当前时间 - 那个时间戳`（分钟）
+4. **如果找不到用户消息**（用户从未在此会话发消息），则使用 thinking-state.json 中的 lastUserMessage
 
-**注意**：静默时段（silentHours）由微触发思考任务处理，管理器继续正常工作。
-
-## 第二步：读取当前状态
+## 第三步：读取当前状态
 
 读取 `~/.openclaw/workspace/thinking-state.json` 获取：
 - microHeartbeatEnabled
 - microHeartbeatCronId（微触发思考的 cron ID）
 
-## 第三步：逻辑判断
+## 第四步：逻辑判断（使用 sessions_history 的时间！）
 
 **如果用户超过 30 分钟没消息 且 microHeartbeatEnabled = false**：
 - 用 `cron update` 启用微触发思考 cron：
-  - `cron(action="update", jobId=microHeartbeatCronId, patch={"enabled": true, "schedule": {"kind": "every", "everyMs": <15-30分钟随机>}})`
+  - `cron(action="update", jobId=microHeartbeatCronId, patch={"enabled": true, "schedule": {"kind": "every", "everyMs": <5-15分钟随机>}})`
 - 更新 thinking-state.json：
   - microHeartbeatEnabled = true
 
@@ -35,8 +36,9 @@
   - `cron(action="update", jobId=microHeartbeatCronId, patch={"enabled": false})`
 - 更新 thinking-state.json：
   - microHeartbeatEnabled = false
+  - lastUserMessage = sessions_history 获取的最新用户消息时间（毫秒时间戳）
 
-## 第四步：动态调整自己的间隔
+## 第五步：动态调整自己的间隔
 
 根据用户最后消息时间，调整下次检查间隔：
 
