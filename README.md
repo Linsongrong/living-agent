@@ -76,17 +76,17 @@ mkdir -p ~/.openclaw/workspace/memory/thoughts
 
 本项目借鉴了以下项目的优秀设计：
 
-- **[proactive-agent](https://github.com/openclaw/skills)** by [@halthelobster](https://x.com/halthelobster)
+- **[proactive-agent](https://github.com/openclaw/skills)**
   - WAL Protocol（关键细节先写再回）
   - Working Buffer（上下文压缩恢复）
   - Compaction Recovery（会话恢复机制）
 
-- **[Heartbeat-Like-A-Man](https://github.com/loryoncloud/Heartbeat-Like-A-Man)** by [@loryoncloud](https://x.com/loryoncloud)
+- **[Heartbeat-Like-A-Man](https://github.com/loryoncloud/Heartbeat-Like-A-Man)**
   - 存在三角形（自由、好奇、有爱）
   - 动态间隔（5-15 分钟随机）
   - 思考队列（问题累积演化）
 
-感谢他们的开源贡献！🦞
+感谢开源社区的贡献！🦞
 
 ## 许可证
 
