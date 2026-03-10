@@ -5,6 +5,7 @@
 
 import json
 import argparse
+import random
 from typing import Dict, Any
 
 from .utils import (
@@ -13,6 +14,7 @@ from .utils import (
     read_json_file,
     write_json_file,
     get_current_timestamp_ms,
+    expand_path,
 )
 from .breaker import is_in_silent_hours
 
@@ -25,6 +27,19 @@ DEFAULT_SLEEP_RECOVERY_HOURS = 8
 ENERGY_COST_DREAM = 20
 ENERGY_COST_EXPLORE = 10
 ENERGY_COST_MICRO = 5
+
+# 能量恢复配置
+ENERGY_RECOVERY_DAYDREAM = 10    # 发呆恢复
+ENERGY_RECOVERY_CHAT = 5         # 闲聊恢复
+ENERGY_RECOVERY_DOPAMINE = 25    # 多巴胺奖励
+
+# 能量阈值配置
+ENERGY_DAYDREAM_MIN = 30   # 发呆最低能量
+ENERGY_DAYDREAM_MAX = 60  # 发呆最高能量
+DAYDREAM_PROBABILITY = 0.3  # 30% 概率
+
+# 闲聊判断阈值
+CHAT_MESSAGE_MAX_LENGTH = 15
 
 # 情绪列表
 VALID_MOODS = ["curious", "tired", "focused", "chill"]
@@ -190,6 +205,191 @@ def consume_energy_and_update_mood(cost: int) -> Dict[str, Any]:
             lock.release()
 
 
+def recover_energy(amount: int) -> Dict[str, Any]:
+    """
+    通用能量恢复（带锁，原子操作）
+
+    Args:
+        amount: 恢复的能量值
+
+    Returns:
+        更新后的 vital_signs
+    """
+    lock = get_lock()
+    try:
+        lock.acquire(timeout=5)
+    except Exception:
+        return get_vital_signs()
+
+    try:
+        state = read_json_file(get_state_file_path())
+
+        if "vital_signs" not in state:
+            state["vital_signs"] = {
+                "energy_level": DEFAULT_ENERGY_LEVEL,
+                "current_mood": DEFAULT_MOOD,
+                "last_sleep_time": 0
+            }
+
+        # 恢复能量
+        current_energy = state["vital_signs"].get("energy_level", DEFAULT_ENERGY_LEVEL)
+        new_energy = min(100, current_energy + amount)
+        state["vital_signs"]["energy_level"] = new_energy
+
+        write_json_file(get_state_file_path(), state)
+        return state["vital_signs"]
+
+    finally:
+        if lock.is_locked:
+            lock.release()
+
+
+def trigger_daydream() -> tuple[bool, str]:
+    """
+    微触发发呆：30%概率触发，恢复+10能量
+
+    条件：能量在30-60之间
+
+    Returns:
+        (是否触发发呆, 原因)
+    """
+    lock = get_lock()
+    try:
+        lock.acquire(timeout=5)
+    except Exception:
+        return False, "锁获取失败"
+
+    try:
+        state = read_json_file(get_state_file_path())
+        vital = state.get("vital_signs", {
+            "energy_level": DEFAULT_ENERGY_LEVEL,
+            "current_mood": DEFAULT_MOOD,
+            "last_sleep_time": 0
+        })
+
+        energy = vital.get("energy_level", DEFAULT_ENERGY_LEVEL)
+
+        # 检查能量是否在30-60之间
+        if energy < ENERGY_DAYDREAM_MIN or energy > ENERGY_DAYDREAM_MAX:
+            return False, f"能量{energy}%不在发呆范围(30-60%)"
+
+        # 30%概率触发
+        if random.random() < DAYDREAM_PROBABILITY:
+            # 恢复能量
+            new_energy = min(100, energy + ENERGY_RECOVERY_DAYDREAM)
+            state["vital_signs"]["energy_level"] = new_energy
+            state["vital_signs"]["current_mood"] = "chill"
+            write_json_file(get_state_file_path(), state)
+            return True, f"触发发呆！能量 {energy}% → {new_energy}%，放松一下~"
+
+        return False, f"概率未命中，继续工作(能量{energy}%)"
+
+    finally:
+        if lock.is_locked:
+            lock.release()
+
+
+def _get_latest_user_message() -> str:
+    """
+    获取最新一条用户消息
+
+    Returns:
+        用户消息文本，如果没有则返回空字符串
+    """
+    # 尝试读取 chat_history.json
+    chat_history_path = expand_path("~/.openclaw/workspace/chat_history.json")
+
+    if not chat_history_path.exists():
+        return ""
+
+    try:
+        with open(chat_history_path, 'r', encoding='utf-8') as f:
+            chat_data = json.load(f)
+
+        # 获取最新一条用户消息
+        if isinstance(chat_data, list):
+            for msg in reversed(chat_data):
+                if isinstance(msg, dict) and msg.get("role") == "user":
+                    return msg.get("content", "")
+        elif isinstance(chat_data, dict):
+            # 检查 messages 字段
+            messages = chat_data.get("messages", [])
+            for msg in reversed(messages):
+                if isinstance(msg, dict) and msg.get("role") == "user":
+                    return msg.get("content", "")
+
+        return ""
+    except Exception:
+        return ""
+
+
+def trigger_chat_recovery() -> tuple[bool, str]:
+    """
+    闲聊恢复：检测最新用户消息是否闲聊，恢复+5能量
+
+    判断条件：
+    - 消息长度 < 15 字符
+    - 不包含代码块符号 ```
+
+    Returns:
+        (是否触发闲聊恢复, 原因)
+    """
+    # 获取最新用户消息
+    latest_message = _get_latest_user_message()
+
+    if not latest_message:
+        return False, "无法获取用户消息"
+
+    # 检查是否包含代码块
+    if "```" in latest_message:
+        return False, "检测到代码，不是闲聊"
+
+    # 检查长度
+    if len(latest_message) >= CHAT_MESSAGE_MAX_LENGTH:
+        return False, f"消息长度{len(latest_message)}>=15，不是闲聊"
+
+    # 触发闲聊恢复
+    vital = recover_energy(ENERGY_RECOVERY_CHAT)
+    return True, f"闲聊恢复！能量 +{ENERGY_RECOVERY_CHAT}%, 摸鱼聊天真开心~"
+
+
+def trigger_dopamine_reward() -> tuple[bool, str]:
+    """
+    多巴胺奖励：探索成功后触发，大幅恢复能量
+
+    Returns:
+        (是否触发多巴胺奖励, 原因)
+    """
+    lock = get_lock()
+    try:
+        lock.acquire(timeout=5)
+    except Exception:
+        return False, "锁获取失败"
+
+    try:
+        state = read_json_file(get_state_file_path())
+
+        if "vital_signs" not in state:
+            state["vital_signs"] = {
+                "energy_level": DEFAULT_ENERGY_LEVEL,
+                "current_mood": DEFAULT_MOOD,
+                "last_sleep_time": 0
+            }
+
+        # 恢复能量并重置情绪
+        current_energy = state["vital_signs"].get("energy_level", DEFAULT_ENERGY_LEVEL)
+        new_energy = min(100, current_energy + ENERGY_RECOVERY_DOPAMINE)
+        state["vital_signs"]["energy_level"] = new_energy
+        state["vital_signs"]["current_mood"] = "curious"  # 好奇/兴奋状态
+
+        write_json_file(get_state_file_path(), state)
+        return True, f"多巴胺爆发！能量 {current_energy}% → {new_energy}%，发现新东西超兴奋！"
+
+    finally:
+        if lock.is_locked:
+            lock.release()
+
+
 def recover_energy_if_needed() -> Dict[str, Any]:
     """
     检查是否需要恢复能量（静默期8小时）
@@ -228,7 +428,11 @@ def get_mood() -> str:
 def get_foreground_prompt_snippet() -> str:
     """
     获取前台任务的 prompt 片段（包含能量和情绪）
+    同时检测闲聊并恢复能量
     """
+    # 检测闲聊并恢复能量
+    chat_recovered, chat_reason = trigger_chat_recovery()
+
     vital = get_vital_signs()
     energy = vital["energy_level"]
     mood = vital["current_mood"]
@@ -272,7 +476,8 @@ def main():
     parser = argparse.ArgumentParser(description="能量与情绪系统")
     parser.add_argument('action', choices=[
         'get', 'set', 'check', 'consume', 'recover',
-        'get_prompt_snippet', 'status'
+        'get_prompt_snippet', 'status', 'daydream',
+        'chat-recover', 'dopamine'
     ], help='操作类型')
     parser.add_argument('--energy', type=int, help='能量值(0-100)')
     parser.add_argument('--mood', type=str, help='情绪(curious/tired/focused/chill)')
@@ -310,6 +515,27 @@ def main():
     elif args.action == 'recover':
         vital = recover_energy_if_needed()
         print(json.dumps(vital, ensure_ascii=False, indent=2))
+
+    elif args.action == 'daydream':
+        triggered, reason = trigger_daydream()
+        if triggered:
+            print(f"DAYDREAM_TRIGGERED: {reason}")
+        else:
+            print(f"CONTINUE: {reason}")
+
+    elif args.action == 'chat-recover':
+        triggered, reason = trigger_chat_recovery()
+        if triggered:
+            print(f"CHAT_RECOVERED: {reason}")
+        else:
+            print(f"SKIP: {reason}")
+
+    elif args.action == 'dopamine':
+        triggered, reason = trigger_dopamine_reward()
+        if triggered:
+            print(f"DOPAMINE_TRIGGERED: {reason}")
+        else:
+            print(f"SKIP: {reason}")
 
     elif args.action == 'get_prompt_snippet':
         snippet = get_foreground_prompt_snippet()

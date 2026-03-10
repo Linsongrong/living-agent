@@ -69,6 +69,24 @@ python3 ~/.openclaw/skills/living-agent/src/vital_signs.py check
 - 释放思考锁
 - 直接结束（回复 HEARTBEAT_OK）
 
+## 第四步半：微触发发呆（碎片化回血）
+
+**如果能量在 30-60% 之间，有 30% 概率触发发呆**：
+
+```bash
+# 检查是否触发发呆
+python3 ~/.openclaw/skills/living-agent/src/vital_signs.py daydream
+```
+
+**如果返回 `DAYDREAM_TRIGGERED: ...`**：
+- 触发发呆！恢复 +10 能量
+- 记录日志："[发呆] 能量恢复到 XX%，放松一下~"
+- 释放思考锁
+- 直接结束（回复 HEARTBEAT_OK）
+
+**如果返回 `CONTINUE: ...`**：
+- 概率未命中，继续正常流程
+
 ## 第五步：再次检查微触发状态
 
 即使获取了思考锁，也需要确认微触发是否仍然启用：

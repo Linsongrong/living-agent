@@ -164,6 +164,24 @@ python3 ~/.openclaw/skills/living-agent/src/breaker.py idle
 python3 ~/.openclaw/skills/living-agent/src/vital_signs.py consume --task explore
 ```
 
+## 第十步半：多巴胺奖励（探索成功奖励）
+
+**在消耗能量后，评估探索结果质量**：
+
+```bash
+# 触发多巴胺奖励（大幅恢复能量 +25，情绪重置为 curious）
+python3 ~/.openclaw/skills/living-agent/src/vital_signs.py dopamine
+```
+
+**如果返回 `DOPAMINE_TRIGGERED: ...`**：
+- 探索获得了高质量发现！
+- 能量大幅恢复 +25
+- 情绪变为 curious（好奇/兴奋）
+- 记录日志："[多巴胺] 发现新东西超兴奋！能量恢复到 XX%"
+
+**如果返回 `SKIP: ...`**：
+- 探索结果普通，无奖励
+
 ## 第十一步：增加每日计数
 
 ```bash
