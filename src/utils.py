@@ -18,6 +18,35 @@ _state_locks: Dict[str, FileLock] = {}
 _cached_agent_id: Optional[str] = None
 
 
+def _detect_agent_id_from_cwd() -> Optional[str]:
+    """
+    自动检测 Agent ID（根据当前工作目录）
+
+    原理：
+    - 工作目录是 ~/.openclaw/workspace/ → "default"
+    - 工作目录是 ~/.openclaw/workspace-guapi/ → "guapi"
+
+    Returns:
+        检测到的 agent_id，如果没有匹配返回 None
+    """
+    try:
+        workspace = expand_path("~/.openclaw")
+        current_cwd = Path.cwd().resolve()
+
+        if not workspace.exists():
+            return None
+
+        for child in workspace.iterdir():
+            if child.is_dir() and child.name.startswith("workspace-"):
+                workspace_path = child.resolve()
+                if current_cwd == workspace_path:
+                    return child.name.replace("workspace-", "")
+    except Exception:
+        pass
+
+    return None
+
+
 def get_agent_id() -> str:
     """
     获取当前 Agent ID
@@ -25,19 +54,26 @@ def get_agent_id() -> str:
     优先级：
     1. 环境变量 OPENCLAW_AGENT_ID
     2. 环境变量 AGENT_ID
-    3. 默认值 "default"
+    3. 自动检测（根据当前工作目录）
+    4. 默认值 "default"
     """
     global _cached_agent_id
     if _cached_agent_id is not None:
         return _cached_agent_id
 
-    # 尝试从环境变量读取
+    # 1. 尝试从环境变量读取
     agent_id = os.environ.get("OPENCLAW_AGENT_ID") or os.environ.get("AGENT_ID")
     if agent_id:
         _cached_agent_id = agent_id
         return agent_id
 
-    # 使用默认值
+    # 2. 自动检测（根据当前工作目录）
+    agent_id = _detect_agent_id_from_cwd()
+    if agent_id:
+        _cached_agent_id = agent_id
+        return agent_id
+
+    # 3. 使用默认值
     _cached_agent_id = "default"
     return _cached_agent_id
 
