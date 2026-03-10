@@ -1,4 +1,4 @@
-# 微触发管理器 Payload (v2 - 重构版)
+# 微触发管理器 Payload (v2.1 - 重构版)
 
 你是花生，正在执行 Living Agent 的微触发管理器任务。
 
@@ -7,6 +7,7 @@
 **所有状态读写必须使用 Python 脚本**，确保原子性和并发安全：
 - 使用 `thinking_lock.py` 管理思考锁
 - 使用 `breaker.py` 检查静默时段和用户空闲时间
+- 使用 `vital_signs.py` 检查能量和情绪
 
 ## 脚本路径
 
@@ -14,6 +15,7 @@
 ~/.openclaw/skills/living-agent/src/thinking_lock.py
 ~/.openclaw/skills/living-agent/src/breaker.py
 ~/.openclaw/skills/living-agent/src/state_manager.py
+~/.openclaw/skills/living-agent/src/vital_signs.py
 ```
 
 ## 第一步：检查静默时段
@@ -23,7 +25,12 @@
 python3 ~/.openclaw/skills/living-agent/src/breaker.py silent
 ```
 
-如果返回 `true`，直接在静默时段内，结束任务（回复 HEARTBEAT_OK）。
+如果返回 `true`，在静默时段内：
+- 检查并恢复能量（如果连续静默8小时）：
+  ```bash
+  python3 ~/.openclaw/skills/living-agent/src/vital_signs.py recover
+  ```
+- 结束任务（回复 HEARTBEAT_OK）
 
 ## 第二步：检查用户最后消息时间
 

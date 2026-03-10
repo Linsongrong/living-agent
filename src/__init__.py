@@ -27,6 +27,22 @@ from .breaker import (
     get_user_last_active_time,
 )
 
+from .vital_signs import (
+    get_vital_signs,
+    set_vital_signs,
+    check_energy_for_background_task,
+    consume_energy_and_update_mood,
+    recover_energy_if_needed,
+    get_energy,
+    get_mood,
+    get_foreground_prompt_snippet,
+)
+
+from .inject_soul import (
+    inject_soul,
+    get_soul_status,
+)
+
 from .utils import (
     get_workspace_dir,
     get_state_file_path,
@@ -57,6 +73,18 @@ __all__ = [
     'is_in_silent_hours',
     'get_user_idle_minutes',
     'get_user_last_active_time',
+    # vital_signs
+    'get_vital_signs',
+    'set_vital_signs',
+    'check_energy_for_background_task',
+    'consume_energy_and_update_mood',
+    'recover_energy_if_needed',
+    'get_energy',
+    'get_mood',
+    'get_foreground_prompt_snippet',
+    # inject_soul
+    'inject_soul',
+    'get_soul_status',
     # utils
     'get_workspace_dir',
     'get_state_file_path',
