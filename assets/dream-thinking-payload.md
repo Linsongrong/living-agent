@@ -4,14 +4,25 @@
 
 ## 第零步：检查用户状态
 
-读 thinking-state.json，检查 lastUserMessage。如果用户在 30 分钟内发过消息，说明用户在线，跳过这次思考，回复 "HEARTBEAT_OK" 即可。
+1. 读 thinking-state.json，检查 lastUserMessage
+2. 如果用户在 30 分钟内发过消息，跳过这次思考，回复 "HEARTBEAT_OK"
+3. 如果 >= 30 分钟，调用 sessions_history(sessionKey="agent:main:main", limit=20)
+4. 遍历消息，找第一个 role="user" 的消息
+5. 如果找到且 < 30 分钟，跳过（用户在线）
+6. 如果找到且 >= 30 分钟，继续执行（用户离开）
+7. 如果没找到用户消息，继续执行
 
-## 第一步：恢复上下文
+## 第一步：恢复上下文（动态调整）
 
-1. 调用 sessions_history(sessionKey="agent:main:main", limit=20) 获取最近对话，了解今天和 Lin 聊了什么
-2. 读 SOUL.md
-3. 读 memory/thoughts/ 今天的文件，看看之前想到哪了
-4. 读 thinking-queue.json，看有没有待思考的问题
+1. 如果上一步已经调用了 sessions_history(limit=20)，检查这 20 条消息的时间跨度：
+   - 最新消息的 timestamp - 最旧消息的 timestamp
+   - 如果时间跨度 < 2 小时（活跃对话），再调用 sessions_history(limit=50) 获取更多上下文
+   - 如果时间跨度 >= 2 小时（不活跃），就用这 20 条
+2. 如果上一步没有调用 sessions_history（用户在线，跳过了），现在调用 sessions_history(limit=50)
+3. 如果 sessions_history 调用失败，跳过这一步，直接读文件
+4. 读 SOUL.md
+5. 读 memory/thoughts/ 今天的文件，看看之前想到哪了
+6. 读 thinking-queue.json，看有没有待思考的问题
 
 ## 第二步：深度思考
 
@@ -39,9 +50,14 @@
    ```
    - YYYY-MM-DD: [洞察内容] (来源: thoughts/YYYY-MM-DD.md)
    ```
-2. 读 memory/pending-insights.md，数一下有多少条
-3. 如果 >= 10 条，发提醒到 topic：
-   "💎 积累了 X 个待沉淀的洞察，该整理进 MEMORY.md 了"
+2. 读 memory/pending-insights.md，检查：
+   - 条目数量
+   - 最早一条的日期
+3. 触发提醒的条件（满足任一即可）：
+   - 条目数 >= 10 条（数量触发）
+   - 最早一条距今 >= 7 天（时间触发）
+4. 如果触发，发提醒到 topic：
+   "💎 积累了 X 个待沉淀的洞察（最早的已经 Y 天了），该整理进 MEMORY.md 了"
 
 ## 重要规则
 
